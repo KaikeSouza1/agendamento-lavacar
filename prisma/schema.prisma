@@ -1,0 +1,59 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NOVO MODELO: Cliente
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nome      String   @unique // Nome do cliente é único
+  telefone  String?
+  carros    Carro[]  // Um cliente pode ter vários carros
+  agendamentos Agendamento[]
+}
+
+// NOVO MODELO: Carro
+model Carro {
+  id        Int      @id @default(autoincrement())
+  modelo    String
+  placa     String   @unique // Placa do carro é única
+  clienteId Int
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  agendamentos Agendamento[]
+}
+
+// MODELO ATUALIZADO: Agendamento
+model Agendamento {
+  id           Int      @id @default(autoincrement())
+  data_hora    DateTime
+  criado_em    DateTime @default(now())
+  
+  // CAMPOS ANTIGOS REMOVIDOS (nome_cliente, modelo_carro, placa_carro)
+
+  // NOVOS RELACIONAMENTOS
+  clienteId    Int
+  cliente      Cliente @relation(fields: [clienteId], references: [id])
+  
+  carroId      Int
+  carro        Carro   @relation(fields: [carroId], references: [id])
+  
+  servico      Servico?
+}
+
+model Servico {
+  id            Int           @id @default(autoincrement())
+  agendamentoId Int           @unique
+  agendamento   Agendamento   @relation(fields: [agendamentoId], references: [id], onDelete: Cascade) // Adicionado onDelete
+  status        String        @default("Pendente")
+  observacoes   String?
+  fotos         Json?
+  checklist     Json?
+  iniciado_em   DateTime?
+  finalizado_em DateTime?
+}
