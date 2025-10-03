@@ -1,74 +1,77 @@
-// src/app/api/agendamentos/route.ts
+// src/app/api/agendamentos/[id]/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+// Função para OBTER um agendamento específico
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const agendamentos = await prisma.agendamento.findMany({
-      orderBy: {
-        data_hora: 'asc',
-      },
-      // === PONTO CRÍTICO 1 ===
-      // A linha "servico: true" é essencial.
-      // Ela manda o Prisma buscar o status do serviço.
+    const id = Number(params.id);
+    const agendamento = await prisma.agendamento.findUnique({
+      where: { id },
       include: {
         cliente: true,
         carro: true,
-        servico: true, 
-      }
-    });
-    return NextResponse.json(agendamentos);
-  } catch (error) {
-    return NextResponse.json(
-      { message: 'Erro ao buscar agendamentos.' },
-      { status: 500 }
-    );
-  }
-}
-
-// O restante do arquivo (função POST) continua igual...
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { clienteId, carroId, data_hora } = body; 
-    
-    if (!data_hora || !clienteId || !carroId) {
-      return NextResponse.json(
-        { message: 'Cliente, carro e data/hora são obrigatórios.' },
-        { status: 400 }
-      );
-    }
-
-    const dataHoraAgendamento = new Date(data_hora);
-
-    const agendamentoExistente = await prisma.agendamento.findFirst({
-      where: {
-        data_hora: dataHoraAgendamento,
+        servico: true,
       },
     });
 
-    if (agendamentoExistente) {
-      return NextResponse.json(
-        { message: 'Este horário já está ocupado. Por favor, escolha outro.' },
-        { status: 409 }
-      );
+    if (!agendamento) {
+      return NextResponse.json({ message: 'Agendamento não encontrado.' }, { status: 404 });
     }
+    return NextResponse.json(agendamento);
+  } catch (error) {
+    console.error('Erro ao buscar agendamento:', error);
+    return NextResponse.json({ message: 'Erro ao buscar agendamento.' }, { status: 500 });
+  }
+}
 
-    const novoAgendamento = await prisma.agendamento.create({
+// Função para ATUALIZAR (PUT) um agendamento
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = Number(params.id);
+    const body = await request.json();
+    // ✅ CORREÇÃO: Usar os campos corretos do schema (clienteId, carroId)
+    const { data_hora, clienteId, carroId } = body;
+
+    const agendamentoAtualizado = await prisma.agendamento.update({
+      where: { id },
       data: {
-        data_hora: dataHoraAgendamento,
+        data_hora: new Date(data_hora),
         clienteId: clienteId,
         carroId: carroId,
       },
     });
 
-    return NextResponse.json(novoAgendamento, { status: 201 });
+    return NextResponse.json(agendamentoAtualizado);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: 'Erro ao criar agendamento.' },
-      { status: 500 }
-    );
+    console.error('Erro ao atualizar agendamento:', error);
+    return NextResponse.json({ message: 'Erro ao atualizar agendamento' }, { status: 500 });
+  }
+}
+
+// Função para DELETAR (DELETE) um agendamento
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = Number(params.id);
+
+    // Graças ao `onDelete: Cascade` no schema, o serviço relacionado será deletado automaticamente.
+    await prisma.agendamento.delete({
+      where: { id },
+    });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error('Erro ao deletar agendamento:', error);
+    return NextResponse.json({ message: 'Erro ao deletar agendamento' }, { status: 500 });
   }
 }
