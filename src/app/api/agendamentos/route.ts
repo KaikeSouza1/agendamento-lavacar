@@ -3,17 +3,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Função para BUSCAR (GET) todos os agendamentos
 export async function GET() {
   try {
     const agendamentos = await prisma.agendamento.findMany({
       orderBy: {
         data_hora: 'asc',
       },
-      // Incluímos os dados do cliente e do carro no retorno
+      // === PONTO CRÍTICO 1 ===
+      // A linha "servico: true" é essencial.
+      // Ela manda o Prisma buscar o status do serviço.
       include: {
         cliente: true,
         carro: true,
+        servico: true, 
       }
     });
     return NextResponse.json(agendamentos);
@@ -25,14 +27,12 @@ export async function GET() {
   }
 }
 
-// Função para CRIAR (POST) um novo agendamento
+// O restante do arquivo (função POST) continua igual...
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // Agora recebemos os IDs, não mais os nomes
-    const { data_hora, clienteId, carroId } = body; 
-    const dataHoraAgendamento = new Date(data_hora);
-
+    const { clienteId, carroId, data_hora } = body; 
+    
     if (!data_hora || !clienteId || !carroId) {
       return NextResponse.json(
         { message: 'Cliente, carro e data/hora são obrigatórios.' },
@@ -40,7 +40,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // A lógica de verificação de horário continua a mesma
+    const dataHoraAgendamento = new Date(data_hora);
+
     const agendamentoExistente = await prisma.agendamento.findFirst({
       where: {
         data_hora: dataHoraAgendamento,
@@ -50,11 +51,10 @@ export async function POST(request: Request) {
     if (agendamentoExistente) {
       return NextResponse.json(
         { message: 'Este horário já está ocupado. Por favor, escolha outro.' },
-        { status: 409 } // 409 = Conflict
+        { status: 409 }
       );
     }
 
-    // Criamos o agendamento usando os IDs
     const novoAgendamento = await prisma.agendamento.create({
       data: {
         data_hora: dataHoraAgendamento,

@@ -3,7 +3,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Função GET (sem alterações, mas incluída para garantir)
+// A função GET já está correta
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,7 +13,12 @@ export async function GET(
     const servico = await prisma.servico.findUnique({
       where: { id },
       include: {
-        agendamento: true,
+        agendamento: {
+          include: {
+            cliente: true,
+            carro: true,
+          },
+        },
       },
     });
 
@@ -27,7 +32,7 @@ export async function GET(
   }
 }
 
-// Função PUT (Revisada)
+// A CORREÇÃO ESTÁ NA FUNÇÃO PUT ABAIXO
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -35,9 +40,8 @@ export async function PUT(
   try {
     const id = Number(params.id);
     const body = await request.json();
-    const { status, observacoes, checklist, fotos } = body;
+    const { status, observacoes, checklist, fotos, valor } = body;
 
-    // Garante que 'fotos' seja um array, mesmo que venha nulo
     const fotosParaSalvar = Array.isArray(fotos) ? fotos : [];
 
     const servicoAtualizado = await prisma.servico.update({
@@ -46,8 +50,18 @@ export async function PUT(
         status,
         observacoes,
         checklist,
-        fotos: fotosParaSalvar, // Salva o array de fotos
+        fotos: fotosParaSalvar,
+        valor: valor ? parseFloat(valor) : null,
         ...(status === 'Concluído' && { finalizado_em: new Date() }),
+      },
+      // ADICIONE ESTE BLOCO PARA GARANTIR QUE A RESPOSTA VENHA COMPLETA
+      include: {
+        agendamento: {
+          include: {
+            cliente: true,
+            carro: true,
+          },
+        },
       },
     });
 

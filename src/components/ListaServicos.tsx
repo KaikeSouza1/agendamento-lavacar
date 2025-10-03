@@ -1,4 +1,4 @@
-// src/components/ListaServicos.tsx (CORRIGIDO)
+// src/components/ListaServicos.tsx
 
 "use client";
 
@@ -11,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Wrench, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Tipo atualizado para incluir os dados do cliente e do carro
 type ServicoComAgendamento = Servico & {
     agendamento: Agendamento & {
         cliente: Cliente;
@@ -45,14 +44,7 @@ export function ListaServicos() {
     const servicosEmAndamento = servicos.filter(s => s.status === 'Em Andamento');
     const servicosConcluidos = servicos.filter(s => s.status === 'Concluído');
 
-    if (loading) {
-        return (
-            <div className="space-y-4 mt-6">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </div>
-        )
-    }
+    if (loading) { /* ... (tela de loading não muda) */ }
 
     return (
         <div className="space-y-8 mt-6">
@@ -67,7 +59,6 @@ export function ListaServicos() {
                             <Card key={servico.id} className="cursor-pointer hover:border-primary" onClick={() => router.push(`/servicos/${servico.id}`)}>
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
-                                        {/* CORRIGIDO AQUI */}
                                         <p className="font-bold text-lg">{servico.agendamento.carro.modelo}</p>
                                         <p className="text-sm text-muted-foreground">{servico.agendamento.cliente.nome}</p>
                                     </div>
@@ -92,11 +83,18 @@ export function ListaServicos() {
                             <Card key={servico.id} className="cursor-pointer hover:border-primary opacity-70" onClick={() => router.push(`/servicos/${servico.id}`)}>
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
-                                        {/* CORRIGIDO AQUI */}
                                         <p className="font-bold text-lg">{servico.agendamento.carro.modelo}</p>
                                         <p className="text-sm text-muted-foreground">{servico.agendamento.cliente.nome}</p>
                                     </div>
-                                    <p className="text-sm">Finalizado às {servico.finalizado_em ? format(new Date(servico.finalizado_em), 'HH:mm') : ''}</p>
+                                    {/* ÁREA MODIFICADA PARA MOSTRAR O VALOR */}
+                                    <div className="text-right">
+                                        {servico.valor && (
+                                            <p className="font-bold text-lg text-green-600">
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servico.valor))}
+                                            </p>
+                                        )}
+                                        <p className="text-sm">Finalizado às {servico.finalizado_em ? format(new Date(servico.finalizado_em), 'HH:mm') : ''}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}

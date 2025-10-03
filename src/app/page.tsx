@@ -7,7 +7,7 @@ import { SeletorDataAgenda } from "@/components/SeletorDataAgenda";
 import ListaAgendamentosDia from "@/components/ListaAgendamentosDia";
 import { AgendamentoForm } from "@/components/AgendamentoForm";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
@@ -16,15 +16,19 @@ import {
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ListaServicos } from "@/components/ListaServicos";
-import { Cliente, Carro } from "@prisma/client";
+// === PONTO CRÍTICO 2 ===
+// Precisamos importar o tipo 'Servico'
+import { Cliente, Carro, Servico } from "@prisma/client";
 import { toast } from "sonner";
 
-// Tipos atualizados para refletir o novo schema do banco de dados
-export type AgendamentoComClienteECarro = {
+
+// E adicionar o 'servico' nos nossos tipos customizados
+export type AgendamentoComDadosCompletos = {
   id: number;
   data_hora: string;
   cliente: Cliente;
   carro: Carro;
+  servico: Servico | null;
 };
 
 export type AgendamentoEvent = {
@@ -34,6 +38,7 @@ export type AgendamentoEvent = {
   resource: number;
   cliente: Cliente;
   carro: Carro;
+  servico: Servico | null;
 };
 
 interface DashboardData {
@@ -76,9 +81,8 @@ export default function Home() {
       const response = await fetch('/api/agendamentos');
       if (!response.ok) throw new Error("Falha ao buscar agendamentos");
       
-      const data: AgendamentoComClienteECarro[] = await response.json();
+      const data: AgendamentoComDadosCompletos[] = await response.json();
       
-      // Mapeia os dados da API para o formato que o componente espera
       const eventosFormatados: AgendamentoEvent[] = data.map((ag) => ({
         title: ag.cliente.nome,
         start: new Date(ag.data_hora),
@@ -86,6 +90,7 @@ export default function Home() {
         resource: ag.id,
         cliente: ag.cliente,
         carro: ag.carro,
+        servico: ag.servico, // Passando o 'servico' adiante
       }));
       setAgendamentos(eventosFormatados);
     } catch (error) {
@@ -113,11 +118,7 @@ export default function Home() {
   };
   
   const handleOpenEditModal = (agendamento: AgendamentoEvent) => {
-    // A funcionalidade de edição foi desativada temporariamente pois o novo formulário é complexo.
-    // Isso evita bugs enquanto não implementamos a edição.
     toast.info("A edição de agendamentos será implementada em breve.");
-    // setAgendamentoParaEditar(agendamento);
-    // setModalAberto(true);
   };
 
   return (
@@ -125,11 +126,12 @@ export default function Home() {
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <Image
-            src="/logobarber.png" // Lembre-se de trocar para a logo do lava-car depois
-            alt="Logo do Lava-car"
+            src="/logobarber.png" // Lembre de trocar pela sua logo!
+            alt="Logo da Garage Wier"
             width={250} 
             height={70} 
             priority
+            style={{ height: 'auto' }}
           />
 
           <Button onClick={handleOpenNewModal} className="w-full sm:w-auto text-lg">
@@ -188,10 +190,10 @@ export default function Home() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{agendamentoParaEditar ? 'Editar Agendamento' : 'Novo Agendamento'}</DialogTitle>
+            <DialogDescription>Preencha os dados abaixo para criar ou editar um agendamento.</DialogDescription>
           </DialogHeader>
           <AgendamentoForm 
             onSuccess={handleSuccess} 
-            // A prop agendamentoInicial foi removida pois o novo form não a utiliza ainda
           />
         </DialogContent>
       </Dialog>

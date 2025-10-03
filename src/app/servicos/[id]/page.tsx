@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Agendamento, Servico, Cliente, Carro } from '@prisma/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,38 +16,40 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, Car, User, Calendar, Tag, Camera, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Interface para combinar os tipos do Prisma
-type ServicoComAgendamento = Servico & {
+type ServicoComValor = Servico & { valor?: any };
+
+type ServicoComAgendamento = ServicoComValor & {
   agendamento: Agendamento & {
     cliente: Cliente;
     carro: Carro;
   };
 };
 
-// Itens padrão do checklist
 const ITENS_CHECKLIST = [
   "Lavagem Externa",
-  "Aspiração Interna",
-  "Limpeza de Painel",
-  "Limpeza de Vidros",
-  "Pretinho nos Pneus",
+  "Limpeza Interna",
+  "Aspirador",
+  "Pretinho",
   "Cera",
 ];
 
 export default function PaginaServico() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [servico, setServico] = useState<ServicoComAgendamento | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // States para os campos do formulário
   const [observacoes, setObservacoes] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [fotos, setFotos] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [valor, setValor] = useState("");
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const fetchServico = useCallback(async () => {
     if (!id) return;
@@ -57,8 +59,10 @@ export default function PaginaServico() {
       if (!response.ok) throw new Error("Serviço não encontrado");
       const data: ServicoComAgendamento = await response.json();
       setServico(data);
-      setObservacoes(data.observacoes || "");
 
+      setObservacoes(data.observacoes || "");
+      setValor(data.valor ? String(data.valor) : "");
+      
       if (data.checklist && typeof data.checklist === 'object') {
         setChecklist(data.checklist as Record<string, boolean>);
       } else {
@@ -73,19 +77,70 @@ export default function PaginaServico() {
       }
 
     } catch (error) {
-      console.error("Erro ao buscar serviço:", error);
       toast.error("Serviço não encontrado.");
+      router.push("/");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     if (id) {
         fetchServico();
     }
   }, [id, fetchServico]);
+  
+  const handleSave = async ({ novoStatus, fotosParaSalvar = fotos, isAutoSave = false }: { 
+    novoStatus?: 'Concluído'; 
+    fotosParaSalvar?: string[];
+    isAutoSave?: boolean;
+  } = {}) => {
+    
+    if (novoStatus === 'Concluído') {
+      setIsFinalizing(true);
+    }
 
+    try {
+      const response = await fetch(`/api/servicos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: novoStatus || servico?.status,
+          observacoes,
+          checklist,
+          fotos: fotosParaSalvar,
+          valor: valor
+        }),
+      });
+
+      if (!response.ok) throw new Error("Falha ao salvar");
+      
+      const updatedServico = await response.json();
+      
+      setServico(updatedServico); 
+      
+      setFotos(Array.isArray(updatedServico.fotos) ? updatedServico.fotos : []);
+      setValor(updatedServico.valor ? String(updatedServico.valor) : "");
+
+      if(novoStatus === 'Concluído') {
+        toast.success("Serviço finalizado com sucesso!");
+      } else if (!isAutoSave) {
+        toast.success("Progresso salvo!");
+      }
+
+    } catch (error) {
+      toast.error("Erro ao salvar as alterações.");
+    } finally {
+      if (novoStatus === 'Concluído') {
+        setIsFinalizing(false);
+      }
+    }
+  };
+
+  const handleChecklistChange = (item: string) => {
+    setChecklist(prev => ({ ...prev, [item]: !prev[item] }));
+  };
+  
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -100,7 +155,8 @@ export default function PaginaServico() {
       formData.append('file', file);
       formData.append('upload_preset', UPLOAD_PRESET); 
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -112,7 +168,7 @@ export default function PaginaServico() {
       
       setFotos(newFotos);
       
-      await handleSave(undefined, newFotos, true);
+      await handleSave({ fotosParaSalvar: newFotos, isAutoSave: true });
 
       toast.success("Foto enviada e salva!");
     } catch (error) {
@@ -122,62 +178,54 @@ export default function PaginaServico() {
       setIsUploading(false);
     }
   };
-  
-  const handleChecklistChange = (item: string) => {
-    setChecklist(prev => ({ ...prev, [item]: !prev[item] }));
-  };
-  
-  const handleSave = async (novoStatus?: 'Concluído', fotosParaSalvar?: string[], isAutoSave: boolean = false) => {
-    try {
-      const response = await fetch(`/api/servicos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          observacoes,
-          checklist,
-          fotos: fotosParaSalvar || fotos,
-          status: novoStatus || servico?.status,
-        }),
-      });
 
-      if (!response.ok) throw new Error("Falha ao salvar");
-      
-      if(novoStatus === 'Concluído') {
-        toast.success("Serviço finalizado!");
-      } else if (!isAutoSave) {
-        toast.success("Progresso salvo!");
-      }
-      
-      const updatedServico = await response.json();
-      setServico(prev => ({
-        ...(prev as ServicoComAgendamento),
-        ...updatedServico,
-      })); 
-      setFotos(Array.isArray(updatedServico.fotos) ? updatedServico.fotos : []);
-
-    } catch (error) {
-      toast.error("Erro ao salvar as alterações.");
+  const handleSendWhatsApp = () => {
+    if (!servico || !servico.agendamento.cliente.telefone) {
+        toast.error("Este cliente não possui um número de telefone cadastrado.");
+        return;
     }
+
+    const phone = servico.agendamento.cliente.telefone.replace(/\D/g, '');
+    const internationalPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    const clienteNome = servico.agendamento.cliente.nome.split(' ')[0];
+    
+    const servicosFeitos = Object.entries(checklist)
+        .filter(([_, checked]) => checked)
+        .map(([item]) => `✅ ${item}`)
+        .join('\n');
+
+    const valorFormatado = servico.valor 
+        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servico.valor))
+        : "Valor a combinar";
+
+    // AQUI ESTÁ A CORREÇÃO PARA OS LINKS DAS FOTOS
+    const fotosTexto = fotos.length > 0
+        ? 'Acesse as fotos do seu veículo abaixo:\n' + fotos.map((link, index) => `Foto ${index + 1}: ${link}`).join('\n\n')
+        : '';
+
+    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n*Valor Total:* ${valorFormatado}\n\n${fotosTexto}\n\nAgradecemos a preferência! 😊`;
+    const encodedMessage = encodeURIComponent(message);
+    const url = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
+    window.open(url, '_blank');
   };
 
-  if (loading) {
+  if (loading || !servico) {
     return (
-      <main className="min-h-screen w-full bg-secondary p-4 sm:p-8">
-        <div className="mx-auto max-w-4xl">
-           <Skeleton className="h-10 w-40 mb-8" />
-           <Skeleton className="h-[600px] w-full" />
-        </div>
-      </main>
-    )
-  }
-
-  if (!servico) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center">
-        <h1 className="text-2xl">Serviço não encontrado</h1>
-        <Button asChild className="mt-4">
-          <Link href="/">Voltar para a Agenda</Link>
-        </Button>
+      <main className="flex min-h-screen flex-col items-center justify-center p-4">
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <p className="text-lg">Carregando serviço...</p>
+          </div>
+        ) : (
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-destructive">Serviço não encontrado</h1>
+            <p className="text-muted-foreground mt-2">O serviço que você está procurando não existe ou foi removido.</p>
+            <Button asChild className="mt-6">
+              <Link href="/">Voltar para a Agenda</Link>
+            </Button>
+          </div>
+        )}
       </main>
     );
   }
@@ -188,15 +236,13 @@ export default function PaginaServico() {
         <Button asChild variant="outline" className="mb-6">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Agenda
+            Voltar para a Agenda
           </Link>
         </Button>
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">
-              Detalhes do Serviço
-            </CardTitle>
+            <CardTitle className="text-3xl">Detalhes do Serviço</CardTitle>
             <CardDescription>
               {servico.iniciado_em ? `Iniciado em: ${format(new Date(servico.iniciado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` : 'Serviço pendente de início'}
             </CardDescription>
@@ -242,22 +288,51 @@ export default function PaginaServico() {
             </div>
 
             <div className="space-y-3">
+              <h3 className="font-semibold text-lg">Valor do Serviço</h3>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <Input 
+                  type="number"
+                  placeholder="0,00"
+                  className="pl-9"
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                  disabled={servico.status === 'Concluído'}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
               <h3 className="font-semibold text-lg">Observações</h3>
               <Textarea placeholder="Adicione anotações sobre o estado do veículo..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={5} disabled={servico.status === 'Concluído'} />
             </div>
 
           </CardContent>
-          <CardFooter className="flex justify-end gap-3">
-            {servico.status !== 'Concluído' && (
+          <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            {servico.status !== 'Concluído' ? (
+              <div className="flex justify-end gap-3 w-full">
+                <Button variant="outline" onClick={() => handleSave({})}>Salvar Progresso</Button>
+                <Button onClick={() => handleSave({ novoStatus: 'Concluído' })} disabled={isFinalizing}>
+                  {isFinalizing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isFinalizing ? 'Finalizando...' : 'Finalizar Serviço'}
+                </Button>
+              </div>
+            ) : (
               <>
-                <Button variant="outline" onClick={() => handleSave()}>Salvar Progresso</Button>
-                <Button onClick={() => handleSave('Concluído')}>Finalizar Serviço</Button>
+                {servico.finalizado_em && (
+                  <p className="text-sm text-muted-foreground sm:text-base">
+                    Finalizado em {format(new Date(servico.finalizado_em), "dd/MM/yy 'às' HH:mm")}
+                  </p>
+                )}
+                <Button 
+                  onClick={handleSendWhatsApp} 
+                  disabled={!servico.agendamento.cliente.telefone}
+                  className="w-full sm:w-auto"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-5 w-5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                  Enviar para Cliente
+                </Button>
               </>
-            )}
-            {servico.status === 'Concluído' && servico.finalizado_em && (
-              <p className="text-green-600 font-semibold">
-                Serviço finalizado em {format(new Date(servico.finalizado_em), "dd/MM/yyyy 'às' HH:mm")}
-              </p>
             )}
           </CardFooter>
         </Card>

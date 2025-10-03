@@ -8,7 +8,12 @@ export async function GET() {
   try {
     const servicos = await prisma.servico.findMany({
       include: {
-        agendamento: true, // Inclui os dados do agendamento relacionado
+        agendamento: {
+          include: {
+            cliente: true,
+            carro: true,
+          },
+        },
       },
       orderBy: {
         iniciado_em: 'desc', // Mostra os mais recentes primeiro
@@ -21,7 +26,7 @@ export async function GET() {
   }
 }
 
-// Função para CRIAR (POST) um novo serviço
+// Função para CRIAR (POST) um novo serviço (ESTA É A VERSÃO CORRETA)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
     });
 
     if (servicoExistente) {
-      // Se já existe, apenas retorna o serviço existente
+      // Se já existe, apenas retorna o serviço existente para evitar duplicados
       return NextResponse.json(servicoExistente, { status: 200 });
     }
 

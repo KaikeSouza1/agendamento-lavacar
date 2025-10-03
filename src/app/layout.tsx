@@ -11,11 +11,14 @@ const fontSans = FontSans({
   variable: "--font-sans",
 });
 
+// AS ALTERAÇÕES ESTÃO AQUI DENTRO
 export const metadata: Metadata = {
-  title: "Emeze Barbearia",
-  description: "Sistema de Agendamentos",
+  // 1. Título alterado para o nome do seu projeto
+  title: "Garage Wier - Agendamentos",
+  description: "Sistema de Agendamentos para Lava-Car",
   icons: {
-    icon: "/logo.png", // Caminho para o seu logo na pasta public
+    // 2. Caminho do ícone alterado para a sua logo
+    icon: "/logobarber.png", //
   },
 };
 
