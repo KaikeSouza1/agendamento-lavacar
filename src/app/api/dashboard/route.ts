@@ -3,7 +3,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { startOfDay, endOfDay, parseISO } from 'date-fns';
-import type { Agendamento } from '@prisma/client';
+
+// ✅ TIPO ATUALIZADO PARA INCLUIR O CLIENTE
+import type { Agendamento, Cliente } from '@prisma/client';
+type AgendamentoComCliente = Agendamento & { cliente: Cliente };
 
 export async function GET(request: Request) {
   try {
@@ -20,18 +23,23 @@ export async function GET(request: Request) {
           lte: fimDoDia,
         },
       },
+      // ✅ 1. ADICIONADO PARA BUSCAR DADOS DO CLIENTE
+      include: {
+        cliente: true,
+      },
       orderBy: {
         data_hora: 'asc',
       },
     });
     
-    const proximoCliente = agendamentosHoje.find((ag: Agendamento) => new Date(ag.data_hora) > new Date());
+    const proximoCliente = agendamentosHoje.find((ag: AgendamentoComCliente) => new Date(ag.data_hora) > new Date()) as AgendamentoComCliente | undefined;
 
     // Objeto de resposta simplificado
     const dadosDashboard = {
       agendamentosHoje: agendamentosHoje.length,
       proximoCliente: proximoCliente 
-        ? { nome: proximoCliente.nome_cliente, horario: proximoCliente.data_hora }
+        // ✅ 2. CORRIGIDO PARA ACESSAR O NOME CORRETAMENTE
+        ? { nome: proximoCliente.cliente.nome, horario: proximoCliente.data_hora }
         : null,
     };
 
