@@ -54,6 +54,7 @@ model Servico {
   observacoes   String?
   fotos         Json?
   checklist     Json?
+  servicos_adicionais String?
   iniciado_em   DateTime?
   finalizado_em DateTime?
   valor         Decimal?

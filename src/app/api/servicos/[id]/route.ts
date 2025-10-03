@@ -40,12 +40,14 @@ export async function PUT(
   try {
     const id = Number(params.id);
     const body = await request.json();
-    const { status, observacoes, checklist, fotos, valor } = body;
+    // ✅ 1. Obtenha o novo campo do corpo da requisição
+    const { status, observacoes, checklist, fotos, valor, servicos_adicionais } = body;
 
     const dadosParaAtualizar: any = {
       observacoes,
       checklist,
       fotos,
+      servicos_adicionais, // ✅ 2. Adicione o campo ao objeto de atualização
     };
 
     if (status) {
@@ -55,7 +57,6 @@ export async function PUT(
       }
     }
     
-    // Converte o valor para Decimal antes de salvar
     if (valor !== undefined && valor !== null && valor !== '') {
       dadosParaAtualizar.valor = parseFloat(valor);
     } else {
