@@ -2,6 +2,7 @@
 
 "use client";
 
+// A importação do 'useState' já existia, apenas garantindo que está aqui.
 import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -24,16 +25,13 @@ import { Card, CardContent } from "@/components/ui/card";
 
 // Tipos e Schemas
 type ClienteComCarros = Cliente & { carros: Carro[] };
-// ADICIONADO "CREATE_CAR" para o novo passo
-type FormStep = "INITIAL" | "SELECT_CLIENT" | "CREATE_CLIENT" | "SCHEDULE_DETAILS" | "CREATE_CAR"; 
+type FormStep = "INITIAL" | "SELECT_CLIENT" | "CREATE_CLIENT" | "SCHEDULE_DETAILS" | "CREATE_CAR";
 
-// SCHEMA ATUALIZADO COM VALIDAÇÃO DE HORÁRIO
 const formSchema = z.object({
   clienteId: z.number({ required_error: "Selecione um cliente." }),
   carroId: z.string({ required_error: "Selecione um carro." }),
   data: z.date({ required_error: "A data é obrigatória." }),
   horario: z.string().refine((time) => {
-    // Valida o formato HH:mm e os limites de hora/minuto
     const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     return regex.test(time);
   }, {
@@ -48,7 +46,6 @@ const novoClienteSchema = z.object({
   placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
 });
 
-// NOVO SCHEMA PARA CADASTRO DE CARRO
 const novoCarroSchema = z.object({
   modelo: z.string().min(2, "Modelo precisa ter pelo menos 2 caracteres."),
   placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
@@ -64,9 +61,11 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- ALTERAÇÃO 1: Adicionar estado para controlar o popover do calendário ---
+  const [isCalendarOpen, setCalendarOpen] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema) });
   const novoClienteForm = useForm<z.infer<typeof novoClienteSchema>>({ resolver: zodResolver(novoClienteSchema) });
-  // NOVO FORM PARA CADASTRO DE CARRO
   const novoCarroForm = useForm<z.infer<typeof novoCarroSchema>>({ resolver: zodResolver(novoCarroSchema) });
 
   const buscarClientes = useCallback(async () => {
@@ -110,7 +109,6 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
-  // NOVA FUNÇÃO PARA CADASTRAR UM CARRO PARA CLIENTE EXISTENTE
   async function onSaveNewCar(values: z.infer<typeof novoCarroSchema>) {
     if (!selectedCliente) return;
 
@@ -130,14 +128,11 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
       const novoCarro: Carro = await response.json();
       toast.success(`Carro ${novoCarro.modelo} cadastrado para ${selectedCliente.nome}!`);
       
-      // Atualiza o estado do cliente e volta para o agendamento
       setSelectedCliente(prev => prev ? { ...prev, carros: [...prev.carros, novoCarro] } : null);
       
-      // Define o carro recém-criado como o selecionado e volta para os detalhes do agendamento
       form.setValue("carroId", novoCarro.id.toString()); 
       novoCarroForm.reset();
       setStep("SCHEDULE_DETAILS");
-      // Opcional: recarrega a lista completa de clientes para manter o estado global atualizado
       buscarClientes(); 
     } catch (error: any) { 
         toast.error(error.message); 
@@ -235,7 +230,6 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       )}
 
-      {/* NOVO PASSO PARA CADASTRO DE CARRO */}
       {step === "CREATE_CAR" && selectedCliente && (
         <div>
             <Button variant="ghost" onClick={() => setStep("SCHEDULE_DETAILS")} className="mb-4">
@@ -287,7 +281,6 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                         </SelectContent>
                         </Select>
                         <FormMessage />
-                        {/* NOVO BOTÃO DE CADASTRO DE CARRO */}
                         <div className="flex justify-end pt-2">
                           <Button 
                             type="button" 
@@ -301,29 +294,54 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                     </FormItem>
                 )}
                 />
+
+                {/* --- ALTERAÇÃO 2: Bloco do Popover do Calendário modificado --- */}
                 <FormField
-                control={form.control} name="data" render={({ field }) => (
+                  control={form.control}
+                  name="data"
+                  render={({ field }) => (
                     <FormItem className="flex flex-col">
-                    <FormLabel>Data do Agendamento</FormLabel>
-                    <Popover>
+                      <FormLabel>Data do Agendamento</FormLabel>
+                      <Popover modal={true} open={isCalendarOpen} onOpenChange={setCalendarOpen}>
                         <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>Escolha uma data</span>)}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Escolha uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
-                        </FormControl>
+                          </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))} initialFocus locale={ptBR} />
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              setCalendarOpen(false); // Fecha o popover ao selecionar
+                            }}
+                            disabled={(date) =>
+                              date < new Date(new Date().setDate(new Date().getDate() - 1))
+                            }
+                            initialFocus
+                            locale={ptBR}
+                          />
                         </PopoverContent>
-                    </Popover>
-                    <FormMessage />
+                      </Popover>
+                      <FormMessage />
                     </FormItem>
-                )}
+                  )}
                 />
                 
-                {/* ÁREA DO HORÁRIO MODIFICADA */}
                 <FormField
                     control={form.control}
                     name="horario"
@@ -336,7 +354,7 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                                     <Input
                                         placeholder="HH:mm"
                                         maxLength={5}
-                                        className="pl-10" // Adiciona espaço para o ícone
+                                        className="pl-10"
                                         {...field}
                                     />
                                 </FormControl>
