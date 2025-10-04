@@ -180,6 +180,7 @@ export default function PaginaServico() {
     }
   };
 
+  // ############ A CORREÇÃO ESTÁ AQUI ############
   const handleSendWhatsApp = () => {
     if (!servico || !servico.agendamento.cliente.telefone) {
         toast.error("Este cliente não possui um número de telefone cadastrado.");
@@ -191,8 +192,9 @@ export default function PaginaServico() {
         return;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://agendamento-lavacar.vercel.app';
-    const galleryUrl = `${baseUrl}/galeria/${servico.galleryId}`;
+    // CORRIGIDO: Usando a variável de ambiente correta para a galeria
+    const galleryBaseUrl = process.env.NEXT_PUBLIC_GALLERY_BASE_URL || 'https://galeria-lavacar.vercel.app';
+    const galleryUrl = `${galleryBaseUrl}/galeria/${servico.galleryId}`;
 
     const phone = servico.agendamento.cliente.telefone.replace(/\D/g, '');
     const internationalPhone = phone.startsWith('55') ? phone : `55${phone}`;
@@ -220,6 +222,8 @@ export default function PaginaServico() {
     const url = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
     window.open(url, '_blank');
   };
+  // ############ FIM DA CORREÇÃO ############
+
 
   if (loading || !servico) {
     return (
