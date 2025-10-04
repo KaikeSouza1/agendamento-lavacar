@@ -148,7 +148,9 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
           </CardContent>
         </Card>
          <footer className="text-center mt-8 text-muted-foreground text-sm">
-            <p>&copy; {new Date().getFullYear()} Garage Wier. Todos os direitos reservados.</p>
+            <p>&copy; {new Date().getFullYear()} Garage Wier. Todos os direitos reservados.
+              Desenvolvido por Kaike Souza ®
+            </p>
         </footer>
       </div>
     </main>
