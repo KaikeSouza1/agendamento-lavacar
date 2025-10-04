@@ -3,9 +3,18 @@
 import { prisma } from '@/lib/prisma';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Car, User } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Car, User, History } from 'lucide-react'; // Ícone de histórico adicionado
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"; // Componente do histórico
 
+// Função para buscar o serviço atual (sem alterações)
 async function getServicoData(galleryId: string) {
   const servico = await prisma.servico.findUnique({
     where: { galleryId: galleryId },
@@ -21,12 +30,43 @@ async function getServicoData(galleryId: string) {
   return servico;
 }
 
+// NOVA FUNÇÃO: Busca os últimos 5 serviços concluídos do cliente
+async function getHistoricoServicos(clienteId: number, currentServicoId: number) {
+  const historico = await prisma.servico.findMany({
+    where: {
+      status: 'Concluído',
+      id: {
+        not: currentServicoId, // Exclui o serviço que o cliente já está vendo
+      },
+      agendamento: {
+        clienteId: clienteId,
+      },
+    },
+    include: {
+      agendamento: {
+        include: {
+          carro: true,
+        },
+      },
+    },
+    orderBy: {
+      finalizado_em: 'desc',
+    },
+    take: 5, // Pega os últimos 5 para a lista não ficar gigante
+  });
+  return historico;
+}
+
+
 export default async function PaginaGaleria({ params }: { params: { id: string } }) {
   const servico = await getServicoData(params.id);
 
   if (!servico) {
     notFound();
   }
+
+  // AQUI BUSCAMOS O HISTÓRICO LOGO APÓS PEGAR OS DADOS DO SERVIÇO ATUAL
+  const historico = await getHistoricoServicos(servico.agendamento.clienteId, servico.id);
 
   const fotos = Array.isArray(servico.fotos) ? (servico.fotos as string[]) : [];
 
@@ -47,7 +87,6 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl">Galeria do Veículo</CardTitle>
-            {/* A linha da CardDescription com a data foi removida */}
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="rounded-lg border bg-background p-4 space-y-3">
@@ -72,9 +111,35 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
                     <p className="text-muted-foreground text-center py-8">Nenhuma foto foi adicionada a este serviço.</p>
                 )}
             </div>
-            
-            {/* A seção de "Serviços Adicionais" foi removida */}
 
+            {/* SEÇÃO DO HISTÓRICO ADICIONADA AQUI */}
+            {historico.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Histórico de Serviços
+                </h3>
+                <Accordion type="single" collapsible className="w-full">
+                  {historico.map((servicoAnterior) => (
+                    <AccordionItem value={`item-${servicoAnterior.id}`} key={servicoAnterior.id}>
+                      <AccordionTrigger>
+                        {format(new Date(servicoAnterior.finalizado_em!), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="flex flex-col space-y-2">
+                           <p><strong>Carro:</strong> {servicoAnterior.agendamento.carro.modelo}</p>
+                           <p><strong>Valor:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servicoAnterior.valor))}</p>
+                           <a href={`/galeria/${servicoAnterior.galleryId}`} className="text-sm text-primary hover:underline mt-2">
+                             Ver galeria deste serviço
+                           </a>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            )}
+            
           </CardContent>
         </Card>
          <footer className="text-center mt-8 text-muted-foreground text-sm">
