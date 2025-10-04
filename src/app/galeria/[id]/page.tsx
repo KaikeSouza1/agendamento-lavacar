@@ -154,3 +154,4 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
     </main>
   );
 }
+/////
