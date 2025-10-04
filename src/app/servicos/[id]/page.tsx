@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 type ServicoComAgendamento = Servico & {
   servicos_adicionais?: string | null;
-  galleryId?: string | null; // Adicionado para a galeria
+  galleryId?: string | null;
   agendamento: Agendamento & {
     cliente: Cliente;
     carro: Carro;
@@ -191,7 +191,7 @@ export default function PaginaServico() {
         return;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://agendamento-barbearia-ashy.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://agendamento-lavacar.vercel.app';
     const galleryUrl = `${baseUrl}/galeria/${servico.galleryId}`;
 
     const phone = servico.agendamento.cliente.telefone.replace(/\D/g, '');
