@@ -93,8 +93,7 @@ export default function ListaAgendamentosDia({ agendamentos, dataSelecionada, on
             <div className="space-y-4"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
           ) : agendamentosDoDia.length > 0 ? (
             <ul className="space-y-3">
-              {/* === PONTO CRÍTICO 3 === */}
-              {/* Toda a lógica abaixo depende dos dados de 'servico' para funcionar */}
+              {/* === PONTO CRÍTICO CORRIGIDO: O problema estava aqui === */}
               {agendamentosDoDia.map(ag => {
                 const status = ag.servico?.status;
 
@@ -116,7 +115,7 @@ export default function ListaAgendamentosDia({ agendamentos, dataSelecionada, on
                   </div>
                   <div className="flex items-center gap-2">
                     {status === 'Concluído' ? (
-                        <>
+                        <> {/* Usar Fragmentos para garantir que o resultado do ternário é renderizável */}
                             <div className="flex items-center gap-2 text-green-600 font-medium text-sm">
                                 <CheckCircle2 className="h-4 w-4" />
                                 <span>Finalizado</span>
@@ -126,7 +125,7 @@ export default function ListaAgendamentosDia({ agendamentos, dataSelecionada, on
                             </Button>
                         </>
                     ) : status === 'Em Andamento' ? (
-                        <>
+                        <> {/* Usar Fragmentos */}
                             <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
                                 <Loader2 className="h-4 w-4 animate-spin" />
                                 <span>Em Andamento</span>
@@ -136,7 +135,7 @@ export default function ListaAgendamentosDia({ agendamentos, dataSelecionada, on
                             </Button>
                         </>
                     ) : ( // Pendente
-                        <>
+                        <> {/* Usar Fragmentos */}
                             <Button variant="default" size="icon" className="h-9 w-9" onClick={() => handleIniciarServico(ag.resource)} aria-label="Iniciar serviço">
                                 <Play className="h-4 w-4" />
                             </Button>

@@ -18,10 +18,9 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Car, User, Calendar, Tag, Camera, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Removida a tipagem ServicoComValor (desnecessária) e atualizada ServicoComAgendamento
-// ✅ Adicionado o novo campo 'servicos_adicionais' ao tipo
 type ServicoComAgendamento = Servico & {
   servicos_adicionais?: string | null;
+  galleryId?: string | null; // Adicionado para a galeria
   agendamento: Agendamento & {
     cliente: Cliente;
     carro: Carro;
@@ -49,7 +48,6 @@ export default function PaginaServico() {
   const [isUploading, setIsUploading] = useState(false);
   const [valor, setValor] = useState("");
   const [isFinalizing, setIsFinalizing] = useState(false);
-  // ✅ State para os serviços adicionais
   const [servicosAdicionais, setServicosAdicionais] = useState("");
 
   const fetchServico = useCallback(async () => {
@@ -63,7 +61,6 @@ export default function PaginaServico() {
 
       setObservacoes(data.observacoes || "");
       setValor(data.valor ? String(data.valor) : "");
-      // ✅ Carrega os serviços adicionais salvos
       setServicosAdicionais(data.servicos_adicionais || "");
       
       if (data.checklist && typeof data.checklist === 'object') {
@@ -113,7 +110,7 @@ export default function PaginaServico() {
           checklist,
           fotos: fotosParaSalvar,
           valor: valor,
-          servicos_adicionais: servicosAdicionais, // ✅ Envia o novo campo para a API
+          servicos_adicionais: servicosAdicionais,
         }),
       });
 
@@ -124,7 +121,6 @@ export default function PaginaServico() {
       setServico(updatedServico); 
       setFotos(Array.isArray(updatedServico.fotos) ? updatedServico.fotos : []);
       setValor(updatedServico.valor ? String(updatedServico.valor) : "");
-      // ✅ Atualiza o estado dos serviços adicionais após salvar
       setServicosAdicionais(updatedServico.servicos_adicionais || "");
 
       if(novoStatus === 'Concluído') {
@@ -189,6 +185,14 @@ export default function PaginaServico() {
         toast.error("Este cliente não possui um número de telefone cadastrado.");
         return;
     }
+    
+    if (!servico.galleryId) {
+        toast.error("ID da galeria não encontrado. Salve o serviço novamente.");
+        return;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://agendamento-barbearia-ashy.vercel.app';
+    const galleryUrl = `${baseUrl}/galeria/${servico.galleryId}`;
 
     const phone = servico.agendamento.cliente.telefone.replace(/\D/g, '');
     const internationalPhone = phone.startsWith('55') ? phone : `55${phone}`;
@@ -204,16 +208,14 @@ export default function PaginaServico() {
         : "Valor a combinar";
 
     const fotosTexto = fotos.length > 0
-        ? 'Acesse as fotos do seu veículo abaixo:\n' + fotos.map((link, index) => `Foto ${index + 1}: ${link}`).join('\n\n')
+        ? `Acesse as fotos do seu veículo abaixo:\n${galleryUrl}\n\n`
         : '';
     
-    // ✅ Lógica para adicionar os serviços extras na mensagem
     const adicionaisTexto = servicosAdicionais.trim()
         ? `*Serviços Adicionais:*\n${servicosAdicionais.trim()}\n\n`
         : '';
 
-    // ✅ Mensagem atualizada: inclui 'adicionaisTexto'
-    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\n${fotosTexto}\n\nAgradecemos a preferência! 😊`;
+    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\n${fotosTexto}Agradecemos a preferência! 😊`;
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
     window.open(url, '_blank');
@@ -278,7 +280,6 @@ export default function PaginaServico() {
               </div>
             </div>
             
-            {/* ✅ NOVO CAMPO PARA SERVIÇOS ADICIONAIS */}
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">Serviços Adicionais</h3>
               <Textarea 

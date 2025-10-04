@@ -24,7 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 // Tipos e Schemas
 type ClienteComCarros = Cliente & { carros: Carro[] };
-type FormStep = "INITIAL" | "SELECT_CLIENT" | "CREATE_CLIENT" | "SCHEDULE_DETAILS";
+// ADICIONADO "CREATE_CAR" para o novo passo
+type FormStep = "INITIAL" | "SELECT_CLIENT" | "CREATE_CLIENT" | "SCHEDULE_DETAILS" | "CREATE_CAR"; 
 
 // SCHEMA ATUALIZADO COM VALIDAÇÃO DE HORÁRIO
 const formSchema = z.object({
@@ -47,6 +48,12 @@ const novoClienteSchema = z.object({
   placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
 });
 
+// NOVO SCHEMA PARA CADASTRO DE CARRO
+const novoCarroSchema = z.object({
+  modelo: z.string().min(2, "Modelo precisa ter pelo menos 2 caracteres."),
+  placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
+});
+
 
 export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
   const [step, setStep] = useState<FormStep>("INITIAL");
@@ -59,6 +66,8 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema) });
   const novoClienteForm = useForm<z.infer<typeof novoClienteSchema>>({ resolver: zodResolver(novoClienteSchema) });
+  // NOVO FORM PARA CADASTRO DE CARRO
+  const novoCarroForm = useForm<z.infer<typeof novoCarroSchema>>({ resolver: zodResolver(novoCarroSchema) });
 
   const buscarClientes = useCallback(async () => {
     try {
@@ -94,6 +103,42 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
       
       novoClienteForm.reset();
       handleSelectCliente(novoCliente);
+    } catch (error: any) { 
+        toast.error(error.message); 
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
+  // NOVA FUNÇÃO PARA CADASTRAR UM CARRO PARA CLIENTE EXISTENTE
+  async function onSaveNewCar(values: z.infer<typeof novoCarroSchema>) {
+    if (!selectedCliente) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/carros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelo: values.modelo,
+          placa: values.placa,
+          clienteId: selectedCliente.id,
+        }),
+      });
+      if (!response.ok) { const data = await response.json(); throw new Error(data.message); }
+      
+      const novoCarro: Carro = await response.json();
+      toast.success(`Carro ${novoCarro.modelo} cadastrado para ${selectedCliente.nome}!`);
+      
+      // Atualiza o estado do cliente e volta para o agendamento
+      setSelectedCliente(prev => prev ? { ...prev, carros: [...prev.carros, novoCarro] } : null);
+      
+      // Define o carro recém-criado como o selecionado e volta para os detalhes do agendamento
+      form.setValue("carroId", novoCarro.id.toString()); 
+      novoCarroForm.reset();
+      setStep("SCHEDULE_DETAILS");
+      // Opcional: recarrega a lista completa de clientes para manter o estado global atualizado
+      buscarClientes(); 
     } catch (error: any) { 
         toast.error(error.message); 
     } finally {
@@ -190,6 +235,33 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       )}
 
+      {/* NOVO PASSO PARA CADASTRO DE CARRO */}
+      {step === "CREATE_CAR" && selectedCliente && (
+        <div>
+            <Button variant="ghost" onClick={() => setStep("SCHEDULE_DETAILS")} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+            </Button>
+            <Card className="mb-6">
+                <CardContent className="p-3">
+                    <p className="text-sm text-muted-foreground">Cliente</p>
+                    <p className="font-bold text-lg">{selectedCliente.nome}</p>
+                </CardContent>
+            </Card>
+            <h2 className="text-xl font-bold mb-4">Cadastrar Novo Carro</h2>
+            <Form {...novoCarroForm}>
+                <form onSubmit={novoCarroForm.handleSubmit(onSaveNewCar)} className="space-y-4">
+                    <FormField control={novoCarroForm.control} name="modelo" render={({field}) => (<FormItem><FormLabel>Modelo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={novoCarroForm.control} name="placa" render={({field}) => (<FormItem><FormLabel>Placa</FormLabel><FormControl><Input {...field} maxLength={8} /></FormControl><FormMessage /></FormItem>)} />
+                    <DialogFooter>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Salvando Carro...' : 'Salvar Carro'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </div>
+      )}
+
       {step === "SCHEDULE_DETAILS" && selectedCliente && (
         <div>
             <Button variant="ghost" onClick={() => setStep("INITIAL")} className="mb-4">
@@ -215,6 +287,17 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                         </SelectContent>
                         </Select>
                         <FormMessage />
+                        {/* NOVO BOTÃO DE CADASTRO DE CARRO */}
+                        <div className="flex justify-end pt-2">
+                          <Button 
+                            type="button" 
+                            variant="link" 
+                            onClick={() => setStep("CREATE_CAR")} 
+                            className="p-0 text-sm h-auto"
+                          >
+                              <PlusCircle className="mr-1 h-4 w-4" /> Cadastrar Outro Carro
+                          </Button>
+                        </div>
                     </FormItem>
                 )}
                 />

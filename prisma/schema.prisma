@@ -57,5 +57,6 @@ model Servico {
   servicos_adicionais String?
   iniciado_em   DateTime?
   finalizado_em DateTime?
+  galleryId     String?       @unique @default(cuid())
   valor         Decimal?
 }
