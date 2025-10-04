@@ -9,30 +9,31 @@ export function middleware(request: NextRequest) {
   const ADMIN_DOMAIN = 'agendamento-lavacar.vercel.app';
   const GALLERY_DOMAIN = 'galeria-lavacar.vercel.app';
 
-  // Em ambiente de desenvolvimento local, permite que tudo funcione normalmente
+  // Em ambiente local, não faz nada
   if (hostname === 'localhost:3000') {
     return NextResponse.next();
   }
 
-  // ### Lógica para o domínio da GALERIA ###
+  // Lógica para o domínio da GALERIA
   if (hostname === GALLERY_DOMAIN) {
-    // Se o caminho for da galeria, permite o acesso
+    // Se o caminho começa com /galeria, permite o acesso.
     if (pathname.startsWith('/galeria')) {
       return NextResponse.next();
     }
-    // Se for qualquer outro caminho (como a raiz '/'), redireciona para o painel admin
-    return NextResponse.redirect(`https://${ADMIN_DOMAIN}`);
+    // Para QUALQUER outro caminho (ex: '/', '/servicos'), retorna um erro 404.
+    // Isso impede que qualquer parte do painel admin seja acessível.
+    return new NextResponse(null, { status: 404 });
   }
 
-  // ### Lógica para o domínio do ADMIN ###
+  // Lógica para o domínio do ADMIN
   if (hostname === ADMIN_DOMAIN) {
-    // Se alguém tentar acessar a galeria pelo domínio do admin, redireciona
+    // Se alguém tentar acessar a galeria pelo domínio do admin, redireciona para o domínio certo.
     if (pathname.startsWith('/galeria')) {
       const url = new URL(request.url);
       url.hostname = GALLERY_DOMAIN;
       return NextResponse.redirect(url);
     }
-    // Permite todos os outros acessos no domínio do admin
+    // Permite todos os outros acessos no domínio do admin.
     return NextResponse.next();
   }
 
@@ -41,7 +42,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Roda o middleware para todas as rotas, exceto arquivos estáticos
-    '/((?!_next/static|_next/image|favicon.ico|logobarber.png).*)',
+    // Roda o middleware para todas as rotas, exceto arquivos de sistema e imagens.
+    '/((?!_next/static|_next/image|favicon.ico|logobarber.png|api/).*)',
   ],
 };
