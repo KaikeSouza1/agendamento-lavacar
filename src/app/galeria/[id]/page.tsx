@@ -4,14 +4,11 @@ import { prisma } from '@/lib/prisma';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Car, User } from 'lucide-react';
 
 async function getServicoData(galleryId: string) {
-  // A busca no banco de dados continua usando o campo "galleryId", isso está correto!
   const servico = await prisma.servico.findUnique({
-    where: { galleryId: galleryId }, // <-- Sem alteração aqui
+    where: { galleryId: galleryId },
     include: {
       agendamento: {
         include: {
@@ -24,9 +21,7 @@ async function getServicoData(galleryId: string) {
   return servico;
 }
 
-// A única mudança é aqui: de "galleryId" para "id"
 export default async function PaginaGaleria({ params }: { params: { id: string } }) {
-  // E aqui: de "params.galleryId" para "params.id"
   const servico = await getServicoData(params.id);
 
   if (!servico) {
@@ -52,9 +47,7 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl">Galeria do Veículo</CardTitle>
-            <CardDescription>
-              Serviço finalizado em: {servico.finalizado_em ? format(new Date(servico.finalizado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : ''}
-            </CardDescription>
+            {/* A linha da CardDescription com a data foi removida */}
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="rounded-lg border bg-background p-4 space-y-3">
@@ -80,12 +73,8 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
                 )}
             </div>
             
-            {servico.servicos_adicionais && (
-                 <div className="space-y-3">
-                    <h3 className="font-semibold text-lg">Serviços Adicionais</h3>
-                    <p className='text-muted-foreground'>{servico.servicos_adicionais}</p>
-                 </div>
-            )}
+            {/* A seção de "Serviços Adicionais" foi removida */}
+
           </CardContent>
         </Card>
          <footer className="text-center mt-8 text-muted-foreground text-sm">
