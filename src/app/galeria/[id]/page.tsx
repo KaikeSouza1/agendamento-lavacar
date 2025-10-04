@@ -6,13 +6,13 @@ import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Car, User, History } from 'lucide-react'; // Ícone de histórico adicionado
+import { Car, User, History } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"; // Componente do histórico
+} from "@/components/ui/accordion";
 
 // Função para buscar o serviço atual (sem alterações)
 async function getServicoData(galleryId: string) {
@@ -32,11 +32,16 @@ async function getServicoData(galleryId: string) {
 
 // NOVA FUNÇÃO: Busca os últimos 5 serviços concluídos do cliente
 async function getHistoricoServicos(clienteId: number, currentServicoId: number) {
+  // ############ A SOLUÇÃO ESTÁ AQUI ############
+  // Força o fuso horário para São Paulo APENAS para esta busca
+  process.env.TZ = 'America/Sao_Paulo';
+  // ###########################################
+
   const historico = await prisma.servico.findMany({
     where: {
       status: 'Concluído',
       id: {
-        not: currentServicoId, // Exclui o serviço que o cliente já está vendo
+        not: currentServicoId,
       },
       agendamento: {
         clienteId: clienteId,
@@ -52,7 +57,7 @@ async function getHistoricoServicos(clienteId: number, currentServicoId: number)
     orderBy: {
       finalizado_em: 'desc',
     },
-    take: 5, // Pega os últimos 5 para a lista não ficar gigante
+    take: 5,
   });
   return historico;
 }
@@ -65,7 +70,6 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
     notFound();
   }
 
-  // AQUI BUSCAMOS O HISTÓRICO LOGO APÓS PEGAR OS DADOS DO SERVIÇO ATUAL
   const historico = await getHistoricoServicos(servico.agendamento.clienteId, servico.id);
 
   const fotos = Array.isArray(servico.fotos) ? (servico.fotos as string[]) : [];
@@ -112,7 +116,6 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
                 )}
             </div>
 
-            {/* SEÇÃO DO HISTÓRICO ADICIONADA AQUI */}
             {historico.length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -123,12 +126,14 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
                   {historico.map((servicoAnterior) => (
                     <AccordionItem value={`item-${servicoAnterior.id}`} key={servicoAnterior.id}>
                       <AccordionTrigger>
-                        {format(new Date(servicoAnterior.finalizado_em!), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        {servicoAnterior.finalizado_em ? format(new Date(servicoAnterior.finalizado_em), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : 'Data indisponível'}
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="flex flex-col space-y-2">
                            <p><strong>Carro:</strong> {servicoAnterior.agendamento.carro.modelo}</p>
-                           <p><strong>Valor:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servicoAnterior.valor))}</p>
+                           {servicoAnterior.valor && (
+                            <p><strong>Valor:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servicoAnterior.valor))}</p>
+                           )}
                            <a href={`/galeria/${servicoAnterior.galleryId}`} className="text-sm text-primary hover:underline mt-2">
                              Ver galeria deste serviço
                            </a>
