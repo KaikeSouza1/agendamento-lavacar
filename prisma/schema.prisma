@@ -22,7 +22,7 @@ model Cliente {
 model Carro {
   id        Int      @id @default(autoincrement())
   modelo    String
-  placa     String   @unique // Placa do carro é única
+  placa     String?   @unique // Placa do carro é única
   clienteId Int
   cliente   Cliente  @relation(fields: [clienteId], references: [id])
   agendamentos Agendamento[]
@@ -33,16 +33,16 @@ model Agendamento {
   id           Int      @id @default(autoincrement())
   data_hora    DateTime
   criado_em    DateTime @default(now())
-  
+
   // CAMPOS ANTIGOS REMOVIDOS (nome_cliente, modelo_carro, placa_carro)
 
   // NOVOS RELACIONAMENTOS
   clienteId    Int
   cliente      Cliente @relation(fields: [clienteId], references: [id])
-  
+
   carroId      Int
   carro        Carro   @relation(fields: [carroId], references: [id])
-  
+
   servico      Servico?
 }
 

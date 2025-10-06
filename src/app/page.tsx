@@ -12,6 +12,7 @@ import { ListaServicos } from "@/components/ListaServicos";
 import { Cliente, Carro, Servico } from "@prisma/client";
 import { toast } from "sonner";
 import { DashboardCompleto } from "@/components/DashboardCompleto";
+import ListaClientes from "@/components/ListaClientes"; // Importe o novo componente
 
 export type AgendamentoComDadosCompletos = {
   id: number;
@@ -43,9 +44,9 @@ export default function Home() {
     try {
       const response = await fetch('/api/agendamentos');
       if (!response.ok) throw new Error("Falha ao buscar agendamentos");
-      
+
       const data: AgendamentoComDadosCompletos[] = await response.json();
-      
+
       const eventosFormatados: AgendamentoEvent[] = data.map((ag) => ({
         title: ag.cliente.nome,
         start: new Date(ag.data_hora),
@@ -77,7 +78,7 @@ export default function Home() {
     setAgendamentoParaEditar(null);
     setModalAberto(true);
   };
-  
+
   const handleOpenEditModal = (agendamento: AgendamentoEvent) => {
     toast.info("A edição de agendamentos será implementada em breve.");
   };
@@ -89,8 +90,8 @@ export default function Home() {
           <Image
             src="/logobarber.png"
             alt="Logo da Garage Wier"
-            width={250} 
-            height={70} 
+            width={250}
+            height={70}
             priority
             style={{ height: 'auto' }}
           />
@@ -99,26 +100,25 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* ✅ AJUSTE: defaultValue mudado para "agendamentos" */}
         <Tabs defaultValue="agendamentos" className="w-full">
-          {/* ✅ AJUSTE: Ordem das abas alterada */}
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="agendamentos">Agenda</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="clientes">Clientes</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="agendamentos">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-6">
               <div className="lg:col-span-1 flex flex-col gap-6">
-                <SeletorDataAgenda 
-                  dataSelecionada={dataSelecionada} 
-                  onDataChange={(date) => date && setDataSelecionada(date)} 
+                <SeletorDataAgenda
+                  dataSelecionada={dataSelecionada}
+                  onDataChange={(date) => date && setDataSelecionada(date)}
                 />
               </div>
               <div className="lg:col-span-2">
-                <ListaAgendamentosDia 
-                  dataSelecionada={dataSelecionada} 
+                <ListaAgendamentosDia
+                  dataSelecionada={dataSelecionada}
                   agendamentos={agendamentos}
                   onDataChange={setDataSelecionada}
                   loading={loading}
@@ -128,13 +128,17 @@ export default function Home() {
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="servicos">
             <ListaServicos />
           </TabsContent>
 
           <TabsContent value="dashboard">
             <DashboardCompleto />
+          </TabsContent>
+
+          <TabsContent value="clientes">
+            <ListaClientes />
           </TabsContent>
         </Tabs>
       </div>
@@ -148,8 +152,8 @@ export default function Home() {
             <DialogTitle>{agendamentoParaEditar ? 'Editar Agendamento' : 'Novo Agendamento'}</DialogTitle>
             <DialogDescription>Preencha os dados abaixo para criar ou editar um agendamento.</DialogDescription>
           </DialogHeader>
-          <AgendamentoForm 
-            onSuccess={handleSuccess} 
+          <AgendamentoForm
+            onSuccess={handleSuccess}
           />
         </DialogContent>
       </Dialog>

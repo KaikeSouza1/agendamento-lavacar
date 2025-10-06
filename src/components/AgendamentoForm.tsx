@@ -43,22 +43,22 @@ const novoClienteSchema = z.object({
   nome: z.string().min(3, "Nome precisa ter pelo menos 3 caracteres."),
   telefone: z.string().optional(),
   modelo: z.string().min(2, "Modelo precisa ter pelo menos 2 caracteres."),
-  placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
+  placa: z.string().optional(),
 });
 
 const novoCarroSchema = z.object({
   modelo: z.string().min(2, "Modelo precisa ter pelo menos 2 caracteres."),
-  placa: z.string().min(7, "Placa inválida.").max(8, "Placa inválida."),
+  placa: z.string().optional(),
 });
 
 
 export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
   const [step, setStep] = useState<FormStep>("INITIAL");
-  
+
   const [clientes, setClientes] = useState<ClienteComCarros[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCliente, setSelectedCliente] = useState<ClienteComCarros | null>(null);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- ALTERAÇÃO 1: Adicionar estado para controlar o popover do calendário ---
@@ -74,8 +74,8 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
       if (!response.ok) throw new Error("Erro ao buscar clientes.");
       const data = await response.json();
       setClientes(data);
-    } catch (error) { 
-        toast.error("Erro ao carregar a lista de clientes."); 
+    } catch (error) {
+        toast.error("Erro ao carregar a lista de clientes.");
     }
   }, []);
 
@@ -84,7 +84,7 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
       buscarClientes();
     }
   }, [step, buscarClientes]);
-  
+
   const handleSelectCliente = (cliente: ClienteComCarros) => {
     form.setValue("clienteId", cliente.id);
     setSelectedCliente(cliente);
@@ -96,14 +96,14 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
     try {
       const response = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
       if (!response.ok) { const data = await response.json(); throw new Error(data.message); }
-      
+
       const novoCliente: ClienteComCarros = await response.json();
       toast.success(`Cliente ${novoCliente.nome} cadastrado!`);
-      
+
       novoClienteForm.reset();
       handleSelectCliente(novoCliente);
-    } catch (error: any) { 
-        toast.error(error.message); 
+    } catch (error: any) {
+        toast.error(error.message);
     } finally {
         setIsSubmitting(false);
     }
@@ -124,27 +124,27 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
         }),
       });
       if (!response.ok) { const data = await response.json(); throw new Error(data.message); }
-      
+
       const novoCarro: Carro = await response.json();
       toast.success(`Carro ${novoCarro.modelo} cadastrado para ${selectedCliente.nome}!`);
-      
+
       setSelectedCliente(prev => prev ? { ...prev, carros: [...prev.carros, novoCarro] } : null);
-      
-      form.setValue("carroId", novoCarro.id.toString()); 
+
+      form.setValue("carroId", novoCarro.id.toString());
       novoCarroForm.reset();
       setStep("SCHEDULE_DETAILS");
-      buscarClientes(); 
-    } catch (error: any) { 
-        toast.error(error.message); 
+      buscarClientes();
+    } catch (error: any) {
+        toast.error(error.message);
     } finally {
         setIsSubmitting(false);
     }
   }
-  
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     const [horas, minutos] = values.horario.split(':').map(Number);
-    
+
     const dataHoraFinal = new Date(values.data);
     dataHoraFinal.setHours(horas, minutos, 0, 0);
 
@@ -153,14 +153,14 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
       if (!response.ok) { const data = await response.json(); throw new Error(data.message); }
       toast.success(`Agendamento salvo com sucesso!`);
       onSuccess();
-    } catch (error: any) { 
-        toast.error(error.message); 
-    } finally { 
-        setIsSubmitting(false); 
+    } catch (error: any) {
+        toast.error(error.message);
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
-  const filteredClientes = clientes.filter(cliente => 
+  const filteredClientes = clientes.filter(cliente =>
     cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -185,7 +185,7 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
           </Button>
           <div className="relative mb-4">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-             <Input 
+             <Input
                 placeholder="Buscar por nome..."
                 className="pl-10"
                 value={searchTerm}
@@ -282,10 +282,10 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                         </Select>
                         <FormMessage />
                         <div className="flex justify-end pt-2">
-                          <Button 
-                            type="button" 
-                            variant="link" 
-                            onClick={() => setStep("CREATE_CAR")} 
+                          <Button
+                            type="button"
+                            variant="link"
+                            onClick={() => setStep("CREATE_CAR")}
                             className="p-0 text-sm h-auto"
                           >
                               <PlusCircle className="mr-1 h-4 w-4" /> Cadastrar Outro Carro
@@ -341,7 +341,7 @@ export function AgendamentoForm({ onSuccess }: { onSuccess: () => void }) {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                     control={form.control}
                     name="horario"
