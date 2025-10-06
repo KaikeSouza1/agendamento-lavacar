@@ -6,7 +6,8 @@ import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Car, User, History } from 'lucide-react';
+// 1. IMPORTAÇÃO DO NOVO ÍCONE
+import { Car, User, History, MessageSquareText } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -14,7 +15,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-// Função para buscar o serviço atual (sem alterações)
 async function getServicoData(galleryId: string) {
   const servico = await prisma.servico.findUnique({
     where: { galleryId: galleryId },
@@ -30,12 +30,8 @@ async function getServicoData(galleryId: string) {
   return servico;
 }
 
-// NOVA FUNÇÃO: Busca os últimos 5 serviços concluídos do cliente
 async function getHistoricoServicos(clienteId: number, currentServicoId: number) {
-  // ############ A SOLUÇÃO ESTÁ AQUI ############
-  // Força o fuso horário para São Paulo APENAS para esta busca
   process.env.TZ = 'America/Sao_Paulo';
-  // ###########################################
 
   const historico = await prisma.servico.findMany({
     where: {
@@ -90,23 +86,47 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">Galeria do Veículo</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl">Detalhes do Serviço</CardTitle>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="rounded-lg border bg-background p-4 space-y-3">
-              <h3 className="font-semibold text-lg">Detalhes do Veículo</h3>
+              <h3 className="font-semibold text-lg">Informações do Veículo</h3>
               <div className="flex items-center gap-3 text-muted-foreground"><User className="h-5 w-5"/> <span className="font-medium text-foreground">{servico.agendamento.cliente.nome}</span></div>
               <div className="flex items-center gap-3 text-muted-foreground"><Car className="h-5 w-5"/> <span className="font-medium text-foreground">{servico.agendamento.carro.modelo} - {servico.agendamento.carro.placa || 'Sem placa'}</span></div>
             </div>
 
+            {/* ================================================================== */}
+            {/* 2. NOVA SEÇÃO DE OBSERVAÇÕES ADICIONADA AQUI                     */}
+            {/* ================================================================== */}
+            {servico.observacoes && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <MessageSquareText className="h-5 w-5" />
+                  Observações do Serviço
+                </h3>
+                <div className="rounded-lg border bg-background p-4">
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {servico.observacoes}
+                  </p>
+                </div>
+              </div>
+            )}
+            {/* ================================================================== */}
+
              <div className="space-y-3">
-                <h3 className="font-semibold text-lg">Fotos</h3>
+                <h3 className="font-semibold text-lg">Fotos do Veículo</h3>
                 {fotos.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {fotos.map((url) => (
-                        <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                            <div className="relative aspect-square w-full overflow-hidden rounded-md">
-                                <Image src={url} alt="Foto do serviço" fill sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 hover:scale-105" />
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md group">
+                            <div className="relative aspect-square w-full">
+                                <Image 
+                                  src={url} 
+                                  alt="Foto do serviço" 
+                                  fill 
+                                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" 
+                                  className="object-cover transition-transform duration-300 group-hover:scale-105" 
+                                />
                             </div>
                         </a>
                     ))}
@@ -149,6 +169,7 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
         </Card>
          <footer className="text-center mt-8 text-muted-foreground text-sm">
             <p>&copy; {new Date().getFullYear()} Garage Wier. Todos os direitos reservados.
+              <br/>
               Desenvolvido por Kaike Souza®
             </p>
         </footer>
@@ -156,4 +177,3 @@ export default async function PaginaGaleria({ params }: { params: { id: string }
     </main>
   );
 }
-/////
