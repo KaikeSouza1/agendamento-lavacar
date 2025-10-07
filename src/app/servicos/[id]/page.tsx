@@ -231,7 +231,7 @@ export default function PaginaServico() {
         ? `*Serviços Adicionais:*\n${servicosAdicionais.trim()}\n\n`
         : '';
     
-    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\nVeja as fotos e, se puder, deixe sua avaliação na página abaixo:\n${galleryUrl}\n\nAgradecemos a preferência! 😊`;
+    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\nVeja as fotos do seu veiculo e se puder deixe sua avaliação.:\n${galleryUrl}\n\nAgradecemos a preferência! 😊`;
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
     
