@@ -14,6 +14,7 @@ export async function GET() {
             carro: true,
           },
         },
+        avaliacao: true, // Adicionado para incluir a avaliação
       },
       orderBy: {
         iniciado_em: 'desc', // Mostra os mais recentes primeiro

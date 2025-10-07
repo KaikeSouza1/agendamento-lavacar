@@ -41,6 +41,7 @@ export default function PaginaServico() {
   const id = params.id as string;
   const [servico, setServico] = useState<ServicoComAgendamento | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
 
   const [observacoes, setObservacoes] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
@@ -180,21 +181,38 @@ export default function PaginaServico() {
     }
   };
 
-  // ############ A CORREÇÃO ESTÁ AQUI ############
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!servico || !servico.agendamento.cliente.telefone) {
         toast.error("Este cliente não possui um número de telefone cadastrado.");
         return;
     }
-    
-    if (!servico.galleryId) {
-        toast.error("ID da galeria não encontrado. Salve o serviço novamente.");
-        return;
+
+    setIsSending(true);
+    let currentGalleryId = servico.galleryId;
+
+    if (!currentGalleryId) {
+        try {
+            const tempId = crypto.randomUUID().slice(0, 8);
+            const response = await fetch(`/api/servicos/${servico.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ galleryId: tempId }),
+            });
+            if (!response.ok) throw new Error("Falha ao criar ID da galeria");
+            
+            const updatedServico = await response.json();
+            currentGalleryId = updatedServico.galleryId;
+            setServico(prev => prev ? { ...prev, galleryId: currentGalleryId } : null);
+            toast.success("ID de galeria criado para serviço antigo!");
+        } catch (error) {
+            toast.error("Erro ao preparar link para serviço antigo. Tente novamente.");
+            setIsSending(false);
+            return;
+        }
     }
 
-    // CORRIGIDO: Usando a variável de ambiente correta para a galeria
     const galleryBaseUrl = process.env.NEXT_PUBLIC_GALLERY_BASE_URL || 'https://galeria-lavacar.vercel.app';
-    const galleryUrl = `${galleryBaseUrl}/galeria/${servico.galleryId}`;
+    const galleryUrl = `${galleryBaseUrl}/galeria/${currentGalleryId}`;
 
     const phone = servico.agendamento.cliente.telefone.replace(/\D/g, '');
     const internationalPhone = phone.startsWith('55') ? phone : `55${phone}`;
@@ -208,21 +226,18 @@ export default function PaginaServico() {
     const valorFormatado = servico.valor 
         ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servico.valor))
         : "Valor a combinar";
-
-    const fotosTexto = fotos.length > 0
-        ? `Acesse as fotos do seu veículo abaixo:\n${galleryUrl}\n\n`
-        : '';
     
     const adicionaisTexto = servicosAdicionais.trim()
         ? `*Serviços Adicionais:*\n${servicosAdicionais.trim()}\n\n`
         : '';
-
-    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\n${fotosTexto}Agradecemos a preferência! 😊`;
+    
+    const message = `Olá ${clienteNome}! 👋\n\nSeu serviço na Garage Wier foi finalizado com sucesso!\n\n*Resumo do Serviço:*\n${servicosFeitos}\n\n${adicionaisTexto}*Valor Total:* ${valorFormatado}\n\nVeja as fotos e, se puder, deixe sua avaliação na página abaixo:\n${galleryUrl}\n\nAgradecemos a preferência! 😊`;
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
+    
     window.open(url, '_blank');
+    setIsSending(false);
   };
-  // ############ FIM DA CORREÇÃO ############
 
 
   if (loading || !servico) {
@@ -353,11 +368,12 @@ export default function PaginaServico() {
                 )}
                 <Button 
                   onClick={handleSendWhatsApp} 
-                  disabled={!servico.agendamento.cliente.telefone}
+                  disabled={!servico.agendamento.cliente.telefone || isSending}
                   className="w-full sm:w-auto"
                 >
+                  {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-5 w-5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                  Enviar para Cliente
+                  {isSending ? 'Preparando...' : 'Enviar para Cliente'}
                 </Button>
               </>
             )}

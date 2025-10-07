@@ -1,7 +1,9 @@
+// src/app/api/servicos/[id]/route.ts
+
 import { NextResponse, NextRequest } from 'next/server';
-// 👈 IMPORTANTE: Adicione o import do revalidatePath
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+// A linha 'import { cuid } from ...' foi removida daqui.
 
 // Função para OBTER um serviço específico
 export async function GET(
@@ -75,11 +77,7 @@ export async function PUT(
         },
       },
     });
-
-    // 🚀 A MÁGICA DO CACHE!
-    // Após a atualização no banco de dados, forçamos o Next.js a revalidar (recarregar)
-    // os dados do dashboard na próxima requisição.
-    // Se o seu dashboard estiver em outra rota (ex: /painel), mude para revalidatePath('/painel').
+    
     revalidatePath('/'); 
 
     return NextResponse.json(servicoAtualizado);
@@ -87,4 +85,30 @@ export async function PUT(
     console.error('Erro ao atualizar serviço:', error);
     return NextResponse.json({ message: 'Erro ao atualizar serviço' }, { status: 500 });
   }
+}
+
+// Função para ATUALIZAR PARCIALMENTE (PATCH) um serviço
+export async function PATCH(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const id = Number(params.id);
+        const body = await request.json();
+        const { galleryId } = body;
+
+        if (!galleryId) {
+            return NextResponse.json({ message: 'galleryId é obrigatório' }, { status: 400 });
+        }
+
+        const servicoAtualizado = await prisma.servico.update({
+            where: { id },
+            data: { galleryId },
+        });
+
+        return NextResponse.json(servicoAtualizado);
+    } catch (error) {
+        console.error('Erro ao atualizar galleryId:', error);
+        return NextResponse.json({ message: 'Erro ao atualizar galleryId' }, { status: 500 });
+    }
 }

@@ -22,7 +22,7 @@ model Cliente {
 model Carro {
   id        Int      @id @default(autoincrement())
   modelo    String
-  placa     String?   @unique // Placa do carro é única
+  placa     String? @unique // Placa do carro é única
   clienteId Int
   cliente   Cliente  @relation(fields: [clienteId], references: [id])
   agendamentos Agendamento[]
@@ -59,4 +59,15 @@ model Servico {
   finalizado_em DateTime?
   galleryId     String?       @unique @default(cuid())
   valor         Decimal?
+  avaliacao     Avaliacao? // Adiciona a relação com a avaliação
+}
+
+// NOVO MODELO: Avaliacao
+model Avaliacao {
+  id          Int      @id @default(autoincrement())
+  servicoId   Int      @unique
+  servico     Servico  @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  estrelas    Int
+  comentario  String?
+  criado_em   DateTime @default(now())
 }

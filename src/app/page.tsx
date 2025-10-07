@@ -1,3 +1,5 @@
+// src/app/page.tsx
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -12,6 +14,7 @@ import { ListaServicos } from "@/components/ListaServicos";
 import { Cliente, Carro, Servico } from "@prisma/client";
 import { DashboardCompleto } from "@/components/DashboardCompleto";
 import ListaClientes from "@/components/ListaClientes";
+import { ListaAvaliacoes } from "@/components/ListaAvaliacoes";
 
 // Tipagem ajustada para garantir que `carros` sempre esteja no objeto `cliente`
 export type ClienteComCarros = Cliente & { carros: Carro[] };
@@ -104,11 +107,12 @@ export default function Home() {
         </div>
 
         <Tabs defaultValue="agendamentos" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="agendamentos">Agenda</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
+            <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
           </TabsList>
           
           <TabsContent value="agendamentos">
@@ -142,6 +146,10 @@ export default function Home() {
 
           <TabsContent value="clientes">
             <ListaClientes />
+          </TabsContent>
+
+          <TabsContent value="avaliacoes">
+            <ListaAvaliacoes />
           </TabsContent>
         </Tabs>
       </div>

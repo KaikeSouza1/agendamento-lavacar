@@ -4,18 +4,19 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Agendamento, Servico, Cliente, Carro } from '@prisma/client';
+import { Agendamento, Servico, Cliente, Carro, Avaliacao } from '@prisma/client';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wrench, CheckCircle2 } from 'lucide-react';
+import { Wrench, CheckCircle2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ServicoComAgendamento = Servico & {
     agendamento: Agendamento & {
         cliente: Cliente;
         carro: Carro;
-    }
+    },
+    avaliacao: Avaliacao | null;
 };
 
 export function ListaServicos() {
@@ -88,6 +89,12 @@ export function ListaServicos() {
                                     </div>
                                     {/* ÁREA MODIFICADA PARA MOSTRAR O VALOR */}
                                     <div className="text-right">
+                                        {servico.avaliacao && (
+                                            <div className="flex items-center justify-end gap-1 text-yellow-400 mb-1">
+                                                <Star className="h-4 w-4 fill-current" />
+                                                <span className="font-bold text-sm">{servico.avaliacao.estrelas}</span>
+                                            </div>
+                                        )}
                                         {servico.valor && (
                                             <p className="font-bold text-lg text-green-600">
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(servico.valor))}
