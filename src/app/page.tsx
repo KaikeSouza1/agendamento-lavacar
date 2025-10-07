@@ -10,14 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ListaServicos } from "@/components/ListaServicos";
 import { Cliente, Carro, Servico } from "@prisma/client";
-import { toast } from "sonner";
 import { DashboardCompleto } from "@/components/DashboardCompleto";
-import ListaClientes from "@/components/ListaClientes"; // Importe o novo componente
+import ListaClientes from "@/components/ListaClientes";
+
+// Tipagem ajustada para garantir que `carros` sempre esteja no objeto `cliente`
+export type ClienteComCarros = Cliente & { carros: Carro[] };
 
 export type AgendamentoComDadosCompletos = {
   id: number;
   data_hora: string;
-  cliente: Cliente;
+  cliente: ClienteComCarros;
   carro: Carro;
   servico: Servico | null;
 };
@@ -26,8 +28,8 @@ export type AgendamentoEvent = {
   title: string | undefined;
   start: Date | undefined;
   end: Date | undefined;
-  resource: number;
-  cliente: Cliente;
+  resource: number; // ID do agendamento
+  cliente: ClienteComCarros;
   carro: Carro;
   servico: Servico | null;
 };
@@ -44,15 +46,15 @@ export default function Home() {
     try {
       const response = await fetch('/api/agendamentos');
       if (!response.ok) throw new Error("Falha ao buscar agendamentos");
-
+      
       const data: AgendamentoComDadosCompletos[] = await response.json();
-
+      
       const eventosFormatados: AgendamentoEvent[] = data.map((ag) => ({
         title: ag.cliente.nome,
         start: new Date(ag.data_hora),
         end: new Date(new Date(ag.data_hora).getTime() + 60 * 60 * 1000),
         resource: ag.id,
-        cliente: ag.cliente,
+        cliente: ag.cliente, // Agora `ag.cliente` já inclui `carros`
         carro: ag.carro,
         servico: ag.servico,
       }));
@@ -78,9 +80,10 @@ export default function Home() {
     setAgendamentoParaEditar(null);
     setModalAberto(true);
   };
-
+  
   const handleOpenEditModal = (agendamento: AgendamentoEvent) => {
-    toast.info("A edição de agendamentos será implementada em breve.");
+    setAgendamentoParaEditar(agendamento);
+    setModalAberto(true);
   };
 
   return (
@@ -90,8 +93,8 @@ export default function Home() {
           <Image
             src="/logobarber.png"
             alt="Logo da Garage Wier"
-            width={250}
-            height={70}
+            width={250} 
+            height={70} 
             priority
             style={{ height: 'auto' }}
           />
@@ -107,18 +110,18 @@ export default function Home() {
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
           </TabsList>
-
+          
           <TabsContent value="agendamentos">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-6">
               <div className="lg:col-span-1 flex flex-col gap-6">
-                <SeletorDataAgenda
-                  dataSelecionada={dataSelecionada}
-                  onDataChange={(date) => date && setDataSelecionada(date)}
+                <SeletorDataAgenda 
+                  dataSelecionada={dataSelecionada} 
+                  onDataChange={(date) => date && setDataSelecionada(date)} 
                 />
               </div>
               <div className="lg:col-span-2">
-                <ListaAgendamentosDia
-                  dataSelecionada={dataSelecionada}
+                <ListaAgendamentosDia 
+                  dataSelecionada={dataSelecionada} 
                   agendamentos={agendamentos}
                   onDataChange={setDataSelecionada}
                   loading={loading}
@@ -128,7 +131,7 @@ export default function Home() {
               </div>
             </div>
           </TabsContent>
-
+          
           <TabsContent value="servicos">
             <ListaServicos />
           </TabsContent>
@@ -150,10 +153,13 @@ export default function Home() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{agendamentoParaEditar ? 'Editar Agendamento' : 'Novo Agendamento'}</DialogTitle>
-            <DialogDescription>Preencha os dados abaixo para criar ou editar um agendamento.</DialogDescription>
+            <DialogDescription>
+              {agendamentoParaEditar ? 'Altere os dados do agendamento abaixo.' : 'Preencha os dados para criar um novo agendamento.'}
+            </DialogDescription>
           </DialogHeader>
-          <AgendamentoForm
-            onSuccess={handleSuccess}
+          <AgendamentoForm 
+            agendamentoParaEditar={agendamentoParaEditar}
+            onSuccess={handleSuccess} 
           />
         </DialogContent>
       </Dialog>

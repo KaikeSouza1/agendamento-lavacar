@@ -3,7 +3,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Função para OBTER um agendamento específico
+// Função GET (sem alterações)
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,7 +13,7 @@ export async function GET(
     const agendamento = await prisma.agendamento.findUnique({
       where: { id },
       include: {
-        cliente: true,
+        cliente: { include: { carros: true }},
         carro: true,
         servico: true,
       },
@@ -29,7 +29,7 @@ export async function GET(
   }
 }
 
-// Função para ATUALIZAR (PUT) um agendamento
+// Função PUT (sem alterações)
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -37,15 +37,18 @@ export async function PUT(
   try {
     const id = Number(params.id);
     const body = await request.json();
-    // ✅ CORREÇÃO APLICADA: Usando os campos atuais do schema
     const { data_hora, clienteId, carroId } = body;
+
+    if (!data_hora || !clienteId || !carroId) {
+        return NextResponse.json({ message: 'Todos os campos são obrigatórios.' }, { status: 400 });
+    }
 
     const agendamentoAtualizado = await prisma.agendamento.update({
       where: { id },
       data: {
         data_hora: new Date(data_hora),
-        clienteId: clienteId,
-        carroId: carroId,
+        clienteId: Number(clienteId),
+        carroId: Number(carroId),
       },
     });
 
@@ -56,7 +59,8 @@ export async function PUT(
   }
 }
 
-// Função para DELETAR (DELETE) um agendamento
+// === CORREÇÃO APLICADA AQUI ===
+// Função para DELETAR (DELETE) um agendamento de forma segura
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -64,14 +68,27 @@ export async function DELETE(
   try {
     const id = Number(params.id);
 
-    // O onDelete: Cascade no schema do Prisma já cuida de deletar o serviço junto.
+    // 1. Verifica se existe um serviço vinculado a este agendamento
+    const servico = await prisma.servico.findUnique({
+      where: { agendamentoId: id },
+    });
+
+    // 2. Se um serviço existir, deleta ele primeiro
+    if (servico) {
+      await prisma.servico.delete({
+        where: { id: servico.id },
+      });
+    }
+
+    // 3. Agora deleta o agendamento com segurança
     await prisma.agendamento.delete({
       where: { id },
     });
 
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, { status: 204 }); // Sucesso
   } catch (error) {
-    console.error('Erro ao deletar agendamento:', error);
-    return NextResponse.json({ message: 'Erro ao deletar agendamento' }, { status: 500 });
+    // Adiciona um log mais detalhado no console do servidor para futuras depurações
+    console.error('Erro detalhado ao deletar agendamento:', error);
+    return NextResponse.json({ message: 'Erro no servidor ao deletar agendamento.' }, { status: 500 });
   }
 }

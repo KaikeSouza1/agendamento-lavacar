@@ -9,17 +9,22 @@ export async function GET() {
       orderBy: {
         data_hora: 'asc',
       },
-      // === PONTO CRÍTICO 1 ===
-      // A linha "servico: true" é essencial.
-      // Ela manda o Prisma buscar o status do serviço.
+      // === CORREÇÃO APLICADA AQUI ===
+      // Agora, além de buscar o cliente, também buscamos
+      // a lista de carros associada a ele. Isso corrige o erro de 'map'.
       include: {
-        cliente: true,
+        cliente: {
+          include: {
+            carros: true, 
+          }
+        },
         carro: true,
         servico: true, 
       }
     });
     return NextResponse.json(agendamentos);
   } catch (error) {
+    console.error("Erro ao buscar agendamentos:", error);
     return NextResponse.json(
       { message: 'Erro ao buscar agendamentos.' },
       { status: 500 }
@@ -27,7 +32,6 @@ export async function GET() {
   }
 }
 
-// O restante do arquivo (função POST) continua igual...
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -42,6 +46,7 @@ export async function POST(request: Request) {
 
     const dataHoraAgendamento = new Date(data_hora);
 
+    // Não permite agendar no mesmo horário exato
     const agendamentoExistente = await prisma.agendamento.findFirst({
       where: {
         data_hora: dataHoraAgendamento,
@@ -58,14 +63,14 @@ export async function POST(request: Request) {
     const novoAgendamento = await prisma.agendamento.create({
       data: {
         data_hora: dataHoraAgendamento,
-        clienteId: clienteId,
-        carroId: carroId,
+        clienteId: Number(clienteId),
+        carroId: Number(carroId),
       },
     });
 
     return NextResponse.json(novoAgendamento, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao criar agendamento:", error);
     return NextResponse.json(
       { message: 'Erro ao criar agendamento.' },
       { status: 500 }
