@@ -22,8 +22,7 @@ carros    Carro[]  // Um cliente pode ter vários carros
 model Carro {
   id        Int      @id @default(autoincrement())
   modelo    String
-  placa     String?
-@unique // Placa do carro é única
+  placa     String?  @unique
   clienteId Int
   cliente   Cliente  @relation(fields: [clienteId], references: [id])
   agendamentos Agendamento[]
