@@ -11,14 +11,11 @@ const fontSans = FontSans({
   variable: "--font-sans",
 });
 
-// AS ALTERAÇÕES ESTÃO AQUI DENTRO
 export const metadata: Metadata = {
-  // 1. Título alterado para o nome do seu projeto
   title: "Garage Wier - Agendamentos",
   description: "Sistema de Agendamentos para Lava-Car",
   icons: {
-    // 2. Caminho do ícone alterado para a sua logo
-    icon: "/logobarber.png", //
+    icon: "/logobarber.png",
   },
 };
 
@@ -28,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-br">
+    <html lang="pt-br" suppressHydrationWarning>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",

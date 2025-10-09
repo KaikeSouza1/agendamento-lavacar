@@ -14,7 +14,7 @@ model Cliente {
   id        Int      @id @default(autoincrement())
   nome      String   @unique // Nome do cliente é único
   telefone  String?
-  carros    Carro[]  // Um cliente pode ter vários carros
+carros    Carro[]  // Um cliente pode ter vários carros
   agendamentos Agendamento[]
 }
 
@@ -22,7 +22,8 @@ model Cliente {
 model Carro {
   id        Int      @id @default(autoincrement())
   modelo    String
-  placa     String? @unique // Placa do carro é única
+  placa     String?
+@unique // Placa do carro é única
   clienteId Int
   cliente   Cliente  @relation(fields: [clienteId], references: [id])
   agendamentos Agendamento[]
@@ -41,7 +42,8 @@ model Agendamento {
   cliente      Cliente @relation(fields: [clienteId], references: [id])
 
   carroId      Int
-  carro        Carro   @relation(fields: [carroId], references: [id])
+  
+carro        Carro   @relation(fields: [carroId], references: [id])
 
   servico      Servico?
 }
@@ -52,14 +54,16 @@ model Servico {
   agendamento   Agendamento   @relation(fields: [agendamentoId], references: [id], onDelete: Cascade) // Adicionado onDelete
   status        String        @default("Pendente")
   observacoes   String?
-  fotos         Json?
+fotos         Json?
   checklist     Json?
   servicos_adicionais String?
-  iniciado_em   DateTime?
+iniciado_em   DateTime?
   finalizado_em DateTime?
-  galleryId     String?       @unique @default(cuid())
+  galleryId     String?
+@unique @default(cuid())
   valor         Decimal?
-  avaliacao     Avaliacao? // Adiciona a relação com a avaliação
+  avaliacao     Avaliacao?
+// Adiciona a relação com a avaliação
 }
 
 // NOVO MODELO: Avaliacao
@@ -69,5 +73,12 @@ model Avaliacao {
   servico     Servico  @relation(fields: [servicoId], references: [id], onDelete: Cascade)
   estrelas    Int
   comentario  String?
-  criado_em   DateTime @default(now())
+criado_em   DateTime @default(now())
+}
+
+// NOVO MODELO: Anotacao
+model Anotacao {
+  id        Int      @id @default(autoincrement())
+  conteudo  String
+  criado_em DateTime @default(now())
 }
